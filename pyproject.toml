@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pwfauth"
+version = "1.0.1"
+description = "Official Python client for PWF Auth (pwfauth.com): license-key activation, hardware-ID binding, encrypted sessions with a server-driven kill switch, free trials, remote texts/slides, and OTA update checks."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "PWF Auth" }]
+keywords = ["licensing", "license-key", "authentication", "auth", "drm", "activation", "hwid", "sdk", "pwfauth"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Security :: Cryptography",
+]
+
+# `cryptography` is the ONLY dependency, and it is unavoidable: Python has no AES in
+# its standard library. HTTP goes through urllib rather than `requests`, so this does
+# not drag urllib3/certifi/idna/charset-normalizer into every app that installs it.
+dependencies = ["cryptography>=3.4"]
+
+[project.urls]
+Homepage = "https://pwfauth.com"
+Documentation = "https://pwfauth.com/api.php"
+Repository = "https://github.com/pwfauth/pwfauth-python"
+Issues = "https://github.com/pwfauth/pwfauth-python/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pwfauth"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/pwfauth", "tests", "README.md", "LICENSE", "pyproject.toml"]
