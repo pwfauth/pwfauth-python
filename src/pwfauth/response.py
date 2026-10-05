@@ -56,9 +56,14 @@ class PwfResponse:
 
     data: dict = field(default_factory=dict)
     raw_json: str = ""
+    #: True when the reply was an encrypted envelope. Only the license server can
+    #: seal one, so only an encrypted reply proves the server itself answered.
+    is_enveloped: bool = False
+    #: The HTTP status of the reply (0 when unknown).
+    status_code: int = 0
 
     @staticmethod
-    def parse(body: str) -> "PwfResponse":
+    def parse(body: str, *, is_enveloped: bool = False, status_code: int = 0) -> "PwfResponse":
         try:
             data = json.loads(body)
         except Exception as cause:
@@ -66,7 +71,8 @@ class PwfResponse:
                 "The license server returned a body that is not valid JSON.") from cause
         if not isinstance(data, dict):
             raise PwfError("The license server returned a body that is not a JSON object.")
-        return PwfResponse(data=data, raw_json=body)
+        return PwfResponse(data=data, raw_json=body, is_enveloped=is_enveloped,
+                           status_code=status_code)
 
     @property
     def success(self) -> bool:

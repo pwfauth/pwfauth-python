@@ -40,6 +40,14 @@ class CryptoEnvelope:
         self._enc_key = hashlib.sha256(("enc:" + app_secret).encode("utf-8")).digest()
         self._mac_key = hashlib.sha256(("mac:" + app_secret).encode("utf-8")).digest()
         self._max_drift = max_drift_seconds
+        #: Seconds added to this machine's clock when stamping requests and checking
+        #: replies. The client sets it from the server's time when the server refuses
+        #: a request because this machine's clock is wrong.
+        self.clock_offset_seconds = 0
+
+    def now(self) -> int:
+        """Unix time as the server sees it: this machine's clock plus the offset."""
+        return int(time.time()) + int(self.clock_offset_seconds)
 
     def encrypt(self, plain_json: str) -> str:
         """Encrypt a request body into the wire envelope."""
@@ -54,7 +62,7 @@ class CryptoEnvelope:
         ciphertext = encryptor.update(padded) + encryptor.finalize()
 
         p = base64.b64encode(iv + ciphertext).decode("ascii")
-        t = int(time.time())
+        t = self.now()
         return json.dumps({"p": p, "t": t, "s": self._hmac_hex(p + str(t))},
                           separators=(",", ":"))
 
@@ -75,7 +83,7 @@ class CryptoEnvelope:
             raise PwfCryptoError(
                 "HMAC verification failed — wrong app secret, or the payload was tampered with.")
 
-        if abs(int(time.time()) - t) > self._max_drift:
+        if abs(self.now() - t) > self._max_drift:
             raise PwfCryptoError(
                 "Envelope timestamp is outside the accepted window — "
                 "check this machine's system clock.")

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pwfauth"
-version = "1.0.1"
-description = "Official Python client for PWF Auth (pwfauth.com): license-key activation, hardware-ID binding, encrypted sessions with a server-driven kill switch, free trials, remote texts/slides, and OTA update checks."
+version = "1.1.0"
+description = "Official Python client for PWF Auth (pwfauth.com): license-key activation, hardware-ID binding, encrypted sessions with a server-driven kill switch, self-service device moves, accounts on license keys, free trials, remote texts/slides, and OTA update checks."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -33,7 +33,8 @@ dependencies = ["cryptography>=3.4"]
 
 [project.urls]
 Homepage = "https://pwfauth.com"
-Documentation = "https://pwfauth.com/api.php"
+Documentation = "https://pwfauth.com/docs"
+Changelog = "https://github.com/pwfauth/pwfauth-python/blob/main/CHANGELOG.md"
 Repository = "https://github.com/pwfauth/pwfauth-python"
 Issues = "https://github.com/pwfauth/pwfauth-python/issues"
 
@@ -41,4 +42,4 @@ Issues = "https://github.com/pwfauth/pwfauth-python/issues"
 packages = ["src/pwfauth"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/pwfauth", "tests", "README.md", "LICENSE", "pyproject.toml"]
+include = ["src/pwfauth", "tests", "README.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
