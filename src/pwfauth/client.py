@@ -9,6 +9,8 @@ app that installs this.
 
 from __future__ import annotations
 
+from .server_auth import validate_origin, validate_path, verify_reply
+import secrets
 import json
 import threading
 import urllib.error
@@ -25,7 +27,7 @@ from .response import PwfResponse
 
 __all__ = ["PwfClient", "__version__"]
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 _DEFAULT_BASE_URL = "https://pwfauth.com"
 
@@ -76,7 +78,7 @@ class PwfClient:
     ) -> None:
         """
         :param app_secret:      The 64-character hex secret from App Settings.
-        :param base_url:        Another server, e.g. a staging copy.
+        :param base_url:        Must be https://pwfauth.com; other origins are rejected.
         :param heartbeat_seconds: Seconds between heartbeats. ``None`` (the default)
             uses the interval the server sends at login.
         :param max_heartbeat_failures: Beats in a row without an encrypted answer
@@ -90,8 +92,7 @@ class PwfClient:
         """
         if not app_secret or not isinstance(app_secret, str):
             raise TypeError("app_secret is required.")
-        if not isinstance(base_url, str) or not urlparse(base_url).scheme or not urlparse(base_url).netloc:
-            raise ValueError("base_url must be an absolute URL, e.g. https://pwfauth.com")
+        validate_origin(base_url)
         if max_heartbeat_failures < 1:
             raise ValueError("max_heartbeat_failures must be at least 1, otherwise an "
                              "unreachable server leaves the app running forever.")
@@ -254,8 +255,8 @@ class PwfClient:
         self._heartbeat_loop(stop)
 
     def _heartbeat_loop(self, stop: threading.Event) -> None:
-        # Only an encrypted reply proves the license server answered — nothing else can
-        # seal one. Every other outcome is an unanswered beat: no reply, a reply that
+        # After signature verification, require an encrypted session reply.
+        # A signed plain refusal cannot confirm that the session is active. Every other outcome is an unanswered beat: no reply, a reply that
         # fails verification, a forged plain "success" (PwfSecurityError), and plain
         # refusals, which the server sends when it cannot verify the request at all.
         # The commonest of those is its replay check rejecting a clock more than five
@@ -570,7 +571,11 @@ class PwfClient:
 
     def _send(self, path: str, *, method: str, headers: dict, data: bytes | None,
               require_envelope: bool) -> PwfResponse:
+        validate_origin(self.base_url)
+        validate_path(path)
+        nonce = secrets.token_hex(32)
         req = urllib.request.Request(self.base_url + path, data=data, method=method)
+        req.add_header("X-PWF-Nonce", nonce)
         for k, v in headers.items():
             req.add_header(k, v)
         # Set last and unconditionally: without it urllib's default identifies the
@@ -579,17 +584,21 @@ class PwfClient:
             req.add_header("User-Agent", self.user_agent)
 
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.build_opener(_NoRedirect()).open(req, timeout=self.timeout) as resp:
                 status = resp.status
-                raw = resp.read().decode("utf-8", errors="replace")
+                body = resp.read()
+                signature = resp.headers.get("X-PWF-Signature")
         except urllib.error.HTTPError as e:
             # A 4xx still carries the API's JSON refusal worth reading — Cloudflare
             # eats 5xx bodies, which is why the server uses 4xx for API errors.
             status = e.code
-            raw = e.read().decode("utf-8", errors="replace")
+            body = e.read()
+            signature = e.headers.get("X-PWF-Signature")
         except Exception as cause:
             raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
 
+        verify_reply(nonce, method, path, data, status, body, signature)
+        raw = body.decode("utf-8", errors="strict")
         if not raw.strip():
             raise PwfHttpError(f"The license server returned HTTP {status} with an empty body.",
                                status=status)
@@ -629,3 +638,8 @@ def _is_clock_refusal(reply: PwfResponse) -> bool:
         return True
     message = reply.message or ""
     return reply.error_code == PwfErrorCodes.CRYPTO_ERROR and "expired" in message.lower()
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None

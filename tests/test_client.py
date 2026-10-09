@@ -6,6 +6,12 @@ loopback server instead, so a request has to be encrypted, signed, parsed, answe
 and decrypted for a test to pass.
 """
 
+import base64
+import hashlib
+from unittest.mock import patch
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes
+import pwfauth.server_auth as server_auth
 import json
 import threading
 import time
@@ -13,6 +19,12 @@ import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from pwfauth import CryptoEnvelope, PwfClient, PwfErrorCodes, PwfHttpError, ends_session
+
+_TEST_SIGNER = rsa.generate_private_key(public_exponent=65537, key_size=3072)
+_ORIGIN = server_auth.validate_origin
+
+def _test_origin(url):
+    if not url.startswith("http://127.0.0.1:"): _ORIGIN(url)
 
 SECRET = "a3f9" * 16          # 64 hex chars, same shape as a real app secret
 OTHER_SECRET = "b7c2" * 16
@@ -32,6 +44,9 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        material = "\n".join(("PWF-REPLY-V1", self.headers["X-PWF-Nonce"], self.command, self.path.split("?",1)[0], hashlib.sha256(getattr(self,"request_body",b"")).hexdigest(), str(status), hashlib.sha256(data).hexdigest()))
+        signature = _TEST_SIGNER.sign(material.encode(), padding.PKCS1v15(), hashes.SHA256())
+        self.send_header("X-PWF-Signature", base64.b64encode(signature).decode())
         self.end_headers()
         self.wfile.write(data)
 
@@ -42,6 +57,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length).decode("utf-8") if length else ""
+        self.request_body = raw.encode()
         route(self, raw)
 
     do_GET = _handle
@@ -50,6 +66,9 @@ class _Handler(BaseHTTPRequestHandler):
 
 class ServerCase(unittest.TestCase):
     def setUp(self):
+        self.addCleanup(patch.stopall)
+        patch("pwfauth.server_auth._KEY", _TEST_SIGNER.public_key()).start()
+        patch("pwfauth.client.validate_origin", _test_origin).start()
         _Handler.routes = {}
         self.server = HTTPServer(("127.0.0.1", 0), _Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)

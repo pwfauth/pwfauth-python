@@ -363,10 +363,10 @@ class TestSessionDetails(Base):
             seen.update(ua=h.headers.get("User-Agent", "")), h._reply({"success": True})))
         self.client().get_app_info()
         self.assertEqual(seen["ua"], f"pwfauth-python/{__version__} (+https://pwfauth.com)")
-        self.assertEqual(__version__, "1.1.0")
+        self.assertEqual(__version__, "1.2.0")
 
     def test_options_are_validated(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(PwfSecurityError):
             PwfClient(SECRET, base_url="pwfauth.com")
         with self.assertRaises(ValueError):
             PwfClient(SECRET, max_heartbeat_failures=0)

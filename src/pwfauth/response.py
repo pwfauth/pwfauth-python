@@ -56,8 +56,8 @@ class PwfResponse:
 
     data: dict = field(default_factory=dict)
     raw_json: str = ""
-    #: True when the reply was an encrypted envelope. Only the license server can
-    #: seal one, so only an encrypted reply proves the server itself answered.
+    #: True when the reply was an encrypted envelope. Server authenticity is
+    #: independently verified using the pinned signing key before parsing.
     is_enveloped: bool = False
     #: The HTTP status of the reply (0 when unknown).
     status_code: int = 0

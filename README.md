@@ -1,5 +1,25 @@
 # pwfauth
 
+## Server authentication update
+
+All responses, including errors and clock-correction responses, must carry a valid
+RSA-SHA256 signature from the pinned PWFAuth public key. The private signing key
+stays on the server. Knowing the application secret is not enough to forge this
+signature. A fresh random nonce binds each response to its request, method, path,
+HTTP status and exact body bytes (PWF-REPLY-V1). Query strings are not part of the
+V1 signed path; production HTTPS protects them in transit.
+
+The SDK accepts only `https://pwfauth.com`. Its default transport validates TLS
+certificates and refuses redirects. Missing/invalid signatures fail closed before
+JSON parsing or envelope decryption; unsigned proxy/CDN errors are security errors.
+There is no fallback to the old unsigned protocol. Update the server before clients.
+Applications must never unlock functionality after a security or transport error.
+
+This addresses server emulation. It does not prevent an attacker who controls the
+client machine from modifying the application itself. Keep authoritative valuable
+operations on the server and keep real app secrets out of public repositories.
+
+
 Official Python client for [PWF Auth](https://pwfauth.com). It covers:
 
 - license keys and hardware-ID binding;
@@ -186,7 +206,7 @@ second seat against the licence's device limit.
 
 | Option | Effect |
 | --- | --- |
-| `base_url` | Another server |
+| `base_url` | Fixed to `https://pwfauth.com`; other origins are rejected |
 | `heartbeat_seconds` | Interval between heartbeats; the server's by default |
 | `max_heartbeat_failures` | Beats in a row without an encrypted answer before `NETWORK_LOST`; 3 by default |
 | `max_rate_limited_beats` | Separate budget for HTTP 429; 10 by default |
