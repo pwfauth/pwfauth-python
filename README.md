@@ -1,5 +1,15 @@
 # pwfauth
 
+## Install this security release now
+
+PyPI publication of 1.2.0 is pending. A plain `pip install pwfauth` may still install
+the older release. Install the verified official GitHub wheel instead:
+
+```sh
+python -m pip install "pwfauth @ https://github.com/pwfauth/pwfauth-python/releases/download/v1.2.0/pwfauth-1.2.0-py3-none-any.whl#sha256=9c7526b2e7af4a38944b6af1220e06da22fcfe82c8f61e6a0766e7fb0d5bb2d8"
+```
+
+
 ## Server authentication update
 
 All responses, including errors and clock-correction responses, must carry a valid
