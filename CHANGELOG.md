@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- New server signing key: replies are verified against the new pinned public key (RSA-3072,
+  PWF-REPLY-V1 unchanged). 1.2.0 pins the previous key and cannot talk to the current server:
+  update with `pip install -U pwfauth`.
+
 ## 1.2.0
 
 - Pin the production HTTPS origin and independently verify every server response.

@@ -27,7 +27,7 @@ from .response import PwfResponse
 
 __all__ = ["PwfClient", "__version__"]
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 _DEFAULT_BASE_URL = "https://pwfauth.com"
 

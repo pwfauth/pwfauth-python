@@ -7,15 +7,15 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from .errors import PwfSecurityError
 
 _KEY = serialization.load_pem_public_key(b"""-----BEGIN PUBLIC KEY-----
-MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxF7ROKevJDFTnyfYq5S1
-QkdwMkY8tMAFhMgi5cMIFdpdCO7xvEtirmVUW+sHvttanDPXMQDGgDKdkbspsHpf
-Gbr7vs6ScCltjrGSMx0FansQSvmYp0DVwYVByB0YEhyaej4B+FmwATfHLdFr+XAX
-N+C5BWGpVNYfnt0WknasAn/FTncVr01hk4win2iz3C6avZI/T+YgtsWFJioLRmfu
-UcMSZ+Hs2zEfCawImh6UPQhsotD8ZHgje8IsYVQTosA7WGX0Cyt1OoT1PJbBxsTO
-QaWd6DWqNo4R6GUZzdkb+9Vjj71lmz92Y3rZsff+OIjdbToQqB/sappj4y5tQVtk
-lXnDDs/vW45QAWS6PmKjUFuMetkxOSguUO4BbU2Qk4+/Fp60w2y2WSQuCg4g1nrA
-aJAwb2b/h009dIlxzTwSPk8nfSlnIRDNbUxQkIUQHs/PgNag1qKc75+kZ6/0VXoP
-+2uky8of/4ldFy6FxzRl6FO8jEgrDl8jZpwfiNipz7+pAgMBAAE=
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEArJgpZLCvg6z08gEFN4l/
+x0FiSYQTsuff7bpb5BHFl7/263J0GOk4YCyt+kXftiURGN4J96KZ4ktAV2tgbu5p
+D0LrUa97YLOOkDYIepzbYeSgL8CMQIiDkP86XEp/q2wC7y8weqyRV4fUV8SFNZ3M
+gzwRI+aJxYyJGsPheK7Olq2HD5Dx+idjAz8PEbxLWqbNHnS2PdiZ34jC8darQqKI
+EW65oBeE6ihulLLDqn1miV8tiEjorROyaCE3oScHzyHB7ZPH2YWcW7vYjgk9ED93
+zy3/DrAwyfyWfK2jvb231OFI5+OWKR7XsErlOm3xgAwUkcN3kLxi5/tIbkq3bFOm
+OJEr0hWO/nmUmlyCnBA400xjwEUajXmwILugv5QlLkhKtK31upMTTA9XEloerHyC
+N4NUGx3+4NqNP07cFkTcH1PpinFRp/iVHLX6M2Zabd+V0rynn2X9STtWmRrKPMMB
+AGV+hS8RMg4oliIqmf8FKooQ3HGaL7EoV4n0wgzXG4v9AgMBAAE=
 -----END PUBLIC KEY-----""")
 
 def validate_origin(url):
