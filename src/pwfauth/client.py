@@ -10,9 +10,13 @@ app that installs this.
 from __future__ import annotations
 
 from .server_auth import validate_origin, validate_path, verify_reply
+import http.client
 import secrets
+import socket
 import json
+import ssl
 import threading
+import time
 import urllib.error
 import urllib.request
 import warnings
@@ -27,7 +31,7 @@ from .response import PwfResponse
 
 __all__ = ["PwfClient", "__version__"]
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 _DEFAULT_BASE_URL = "https://pwfauth.com"
 
@@ -583,19 +587,38 @@ class PwfClient:
         if self.user_agent:
             req.add_header("User-Agent", self.user_agent)
 
-        try:
-            with urllib.request.build_opener(_NoRedirect()).open(req, timeout=self.timeout) as resp:
-                status = resp.status
-                body = resp.read()
-                signature = resp.headers.get("X-PWF-Signature")
-        except urllib.error.HTTPError as e:
-            # A 4xx still carries the API's JSON refusal worth reading — Cloudflare
-            # eats 5xx bodies, which is why the server uses 4xx for API errors.
-            status = e.code
-            body = e.read()
-            signature = e.headers.get("X-PWF-Signature")
-        except Exception as cause:
-            raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
+        opener = urllib.request.build_opener(_NoRedirect())
+        for attempt in (1, 2):
+            try:
+                resp = opener.open(req, timeout=self.timeout)
+            except urllib.error.HTTPError as e:
+                # A 4xx still carries the API's JSON refusal worth reading — Cloudflare
+                # eats 5xx bodies, which is why the server uses 4xx for API errors.
+                try:
+                    status = e.code
+                    body = e.read()
+                    signature = e.headers.get("X-PWF-Signature")
+                except Exception as cause:
+                    raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
+                break
+            except Exception as cause:
+                # 1.3.1: no reply at all, so send once more on a new connection. The usual
+                # cause is a connection closed on the way (Windows error 10054, "connection
+                # reset"), and the second try goes through. A reply, even an error reply,
+                # is never sent twice, and neither is a timeout.
+                if attempt == 1 and _no_reply(cause):
+                    time.sleep(RETRY_DELAY)
+                    continue
+                raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
+            try:
+                with resp:
+                    status = resp.status
+                    body = resp.read()
+                    signature = resp.headers.get("X-PWF-Signature")
+            except Exception as cause:
+                # the reply dropped while it was read: the server may have acted on it
+                raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
+            break
 
         verify_reply(nonce, method, path, data, status, body, signature)
         raw = body.decode("utf-8", errors="strict")
@@ -631,6 +654,20 @@ class PwfClient:
             raise PwfSecurityError(
                 "The license server's reply was not encrypted, so it cannot be trusted.")
         return plain
+
+
+# How long to wait before the second try of a request that got no reply (seconds).
+RETRY_DELAY = 0.3
+
+
+def _no_reply(cause: BaseException) -> bool:
+    """True when the request got no reply at all for a reason worth one more try: a reset,
+    a refused or dropped connection. A timeout or a certificate that fails is not retried."""
+    reason = cause.reason if isinstance(cause, urllib.error.URLError) else cause
+    # socket.timeout is its own OSError on 3.9 and TimeoutError from 3.10
+    if isinstance(reason, (socket.timeout, TimeoutError, ssl.SSLCertVerificationError)):
+        return False
+    return isinstance(reason, (OSError, http.client.HTTPException))
 
 
 def _is_clock_refusal(reply: PwfResponse) -> bool:

@@ -13,6 +13,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 import pwfauth.server_auth as server_auth
 import json
+import socket
+import struct
 import threading
 import time
 import unittest
@@ -253,6 +255,73 @@ class TestTransport(ServerCase):
             raw=CryptoEnvelope(OTHER_SECRET).encrypt(json.dumps({"success": True}))))
         with self.assertRaises(Exception):
             self.client().get_app_info()
+
+
+class TestRetry(ServerCase):
+    """1.3.1: a request that got no reply at all is sent once more; a reply, a reply that drops
+    while it is read, and a timeout are never sent twice."""
+
+    @staticmethod
+    def _reset(h):
+        # close with a TCP reset and no reply: what Windows reports as error 10054
+        h.connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        h.connection.close()
+        h.close_connection = True
+
+    def test_reset_connection_is_sent_once_more(self):
+        calls = []
+
+        def login(h, raw):
+            calls.append((raw, h.headers["X-PWF-Nonce"]))
+            if len(calls) == 1:
+                self._reset(h)
+                return
+            h._reply({"success": True, "session_id": "s-2"})
+
+        self.route("/api/auth/login.php", login)
+        c = self.client()
+        res = c.login("K")
+        self.assertTrue(res.success)
+        self.assertEqual(c.session_id, "s-2")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0], calls[1])    # the very same request, nonce included
+
+    def test_reset_twice_raises_after_two_tries(self):
+        calls = []
+
+        def info(h, raw):
+            calls.append(1)
+            self._reset(h)
+
+        self.route("/api/app/info.php", info)
+        with self.assertRaises(PwfHttpError):
+            self.client().get_app_info()
+        self.assertEqual(len(calls), 2)
+
+    def test_an_error_reply_is_not_sent_twice(self):
+        calls = []
+
+        def info(h, raw):
+            calls.append(1)
+            h._reply({"success": False, "error_code": "RATE_LIMITED"}, 429, envelope=False)
+
+        self.route("/api/app/info.php", info)
+        res = self.client().get_app_info()
+        self.assertFalse(res.success)
+        self.assertEqual(len(calls), 1)
+
+    def test_a_timeout_is_not_sent_twice(self):
+        calls = []
+
+        def info(h, raw):
+            calls.append(1)
+            time.sleep(1.5)
+
+        self.route("/api/app/info.php", info)
+        with self.assertRaises(PwfHttpError):
+            self.client(timeout=0.5).get_app_info()
+        time.sleep(1.2)
+        self.assertEqual(len(calls), 1)
 
 
 class TestErrorCodes(unittest.TestCase):

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.1
+
+- A request that got no reply at all, usually a connection closed on the way (Windows error
+  10054, "An existing connection was forcibly closed by the remote host"), is now sent once
+  more on a new connection, 0.3 s later. Before, such a call raised `PwfHttpError`
+  "Could not reach the license server".
+- Only that case is retried: a reply (even an error reply), a reply that drops while it is
+  read, a timeout and a certificate that fails are never sent twice.
+- Same signing key, same API: update with `pip install -U pwfauth`.
+
 ## 1.3.0
 
 - New server signing key: replies are verified against the new pinned public key (RSA-3072,

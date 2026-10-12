@@ -1,19 +1,16 @@
 # pwfauth
 
-## Install this security release now
+## Install 1.3.1
 
-Version 1.2.0 is now published on [PyPI](https://pypi.org/project/pwfauth/1.2.0/).
-
-```sh
-python -m pip install --upgrade pwfauth==1.2.0
-```
-
-The same verified wheel remains available from GitHub:
+PWF Auth signs its replies with a new key. pwfauth 1.3.0 and newer pin it; **1.2.0 cannot talk to
+the current server**, so update:
 
 ```sh
-python -m pip install "pwfauth @ https://github.com/pwfauth/pwfauth-python/releases/download/v1.2.0/pwfauth-1.2.0-py3-none-any.whl#sha256=9c7526b2e7af4a38944b6af1220e06da22fcfe82c8f61e6a0766e7fb0d5bb2d8"
+python -m pip install --upgrade pwfauth==1.3.1
 ```
 
+1.3.1 sends a request once more when the connection drops before any reply (Windows error
+10054), so a dropped connection no longer fails the call. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Server authentication update
 
