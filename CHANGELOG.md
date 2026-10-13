@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0
+
+- Some networks block the name `pwfauth.com` (Etisalat in the UAE answers "no such domain"),
+  so the app could not reach the license server without a VPN. When a request gets no reply
+  at all, it now goes to the same server under its second name, `https://pwfauth.net`.
+- Only when the request certainly never reached a server (the name does not resolve, no
+  connection, a certificate that is not ours), or timed out before this client ever got a
+  reply. A reply, even an error reply, is never sent to the other name.
+- Once `pwfauth.net` answers, the client stays on it. Both names are fixed in the library;
+  `base_url` still accepts only `https://pwfauth.com`. Same signing key, same checks, same API:
+  update with `pip install -U pwfauth`.
+
 ## 1.3.1
 
 - A request that got no reply at all, usually a connection closed on the way (Windows error

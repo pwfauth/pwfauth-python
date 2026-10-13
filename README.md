@@ -1,16 +1,18 @@
 # pwfauth
 
-## Install 1.3.1
+## Install 1.4.0
 
 PWF Auth signs its replies with a new key. pwfauth 1.3.0 and newer pin it; **1.2.0 cannot talk to
 the current server**, so update:
 
 ```sh
-python -m pip install --upgrade pwfauth==1.3.1
+python -m pip install --upgrade pwfauth==1.4.0
 ```
 
-1.3.1 sends a request once more when the connection drops before any reply (Windows error
-10054), so a dropped connection no longer fails the call. See [CHANGELOG.md](CHANGELOG.md).
+1.4.0 works on networks that block the name pwfauth.com (Etisalat in the UAE): when it gets
+no reply at all, the same request goes to the same server as `https://pwfauth.net`. 1.3.1
+sends a request once more when the connection drops before any reply (Windows error 10054).
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## Server authentication update
 

@@ -31,9 +31,13 @@ from .response import PwfResponse
 
 __all__ = ["PwfClient", "__version__"]
 
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 
 _DEFAULT_BASE_URL = "https://pwfauth.com"
+# 1.4.0: the same license server under a second name, used only when pwfauth.com gives no
+# reply at all (some networks block the name: Etisalat in the UAE answers "no such domain").
+# Fixed here, never configurable; once it answers, the client stays on it.
+_BACKUP_BASE_URL = "https://pwfauth.net"
 
 # urllib sends "Python-urllib/3.x" unless told otherwise, and Cloudflare — which
 # fronts pwfauth.com — rejects that outright with a 403 and error code 1010, before
@@ -117,6 +121,8 @@ class PwfClient:
         self.on_session_ended: Callable[[str | None, str | None], None] | None = None
 
         self._crypto = CryptoEnvelope(self.app_secret, max_clock_drift_seconds)
+        self._origin = self.base_url      # the name that answers: base_url, or the backup
+        self._answered = False            # some reply has arrived in this client
         self._session_id: str | None = None
         self._license_key: str | None = None
         self._server_interval = _DEFAULT_HEARTBEAT_SECONDS
@@ -578,7 +584,8 @@ class PwfClient:
         validate_origin(self.base_url)
         validate_path(path)
         nonce = secrets.token_hex(32)
-        req = urllib.request.Request(self.base_url + path, data=data, method=method)
+        origin = self._origin
+        req = urllib.request.Request(origin + path, data=data, method=method)
         req.add_header("X-PWF-Nonce", nonce)
         for k, v in headers.items():
             req.add_header(k, v)
@@ -588,7 +595,7 @@ class PwfClient:
             req.add_header("User-Agent", self.user_agent)
 
         opener = urllib.request.build_opener(_NoRedirect())
-        for attempt in (1, 2):
+        for attempt in (1, 2, 3):
             try:
                 resp = opener.open(req, timeout=self.timeout)
             except urllib.error.HTTPError as e:
@@ -609,6 +616,14 @@ class PwfClient:
                 if attempt == 1 and _no_reply(cause):
                     time.sleep(RETRY_DELAY)
                     continue
+                # 1.4.0: still no reply, so the same request goes to the backup name (same
+                # server, same signing key) when it certainly never reached a server, or timed
+                # out before this client ever got a reply.
+                if (attempt < 3 and origin != _BACKUP_BASE_URL
+                        and (_no_reply(cause) or _blocked(cause) or not self._answered)):
+                    origin = _BACKUP_BASE_URL
+                    req.full_url = origin + path
+                    continue
                 raise PwfHttpError(f"Could not reach the license server: {cause}") from cause
             try:
                 with resp:
@@ -621,6 +636,8 @@ class PwfClient:
             break
 
         verify_reply(nonce, method, path, data, status, body, signature)
+        self._answered = True
+        self._origin = origin
         raw = body.decode("utf-8", errors="strict")
         if not raw.strip():
             raise PwfHttpError(f"The license server returned HTTP {status} with an empty body.",
@@ -668,6 +685,13 @@ def _no_reply(cause: BaseException) -> bool:
     if isinstance(reason, (socket.timeout, TimeoutError, ssl.SSLCertVerificationError)):
         return False
     return isinstance(reason, (OSError, http.client.HTTPException))
+
+
+def _blocked(cause: BaseException) -> bool:
+    """True when the name was answered by something else: a network that blocks it may
+    send its own certificate, which fails verification before anything is sent."""
+    reason = cause.reason if isinstance(cause, urllib.error.URLError) else cause
+    return isinstance(reason, ssl.SSLCertVerificationError)
 
 
 def _is_clock_refusal(reply: PwfResponse) -> bool:
