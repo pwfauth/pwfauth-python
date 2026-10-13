@@ -265,6 +265,43 @@ class TestFixedCalls(Base):
         c.get_texts()
         self.assertEqual(seen["headers"].get("Authorization"), "Bearer K")
 
+    # 1.5.0: user variables (api/auth/var.php), typed calls on the signed-in session
+    def test_set_variable_sends_session_action_name_value(self):
+        seen = self.capture("/api/auth/var.php", {"success": True, "name": "theme"})
+        self.signed_in().set_variable("theme", "dark")
+        self.assertEqual(seen["body"], {"session_id": "s", "action": "set", "name": "theme", "value": "dark"})
+        with self.assertRaises(TypeError):
+            self.signed_in().set_variable("n", 5)
+
+    def test_get_variable_returns_the_value_or_none(self):
+        seen = self.capture("/api/auth/var.php", {"success": True, "name": "theme", "value": "dark", "exists": True})
+        self.assertEqual(self.signed_in().get_variable("theme"), "dark")
+        self.assertEqual(seen["body"], {"session_id": "s", "action": "get", "name": "theme"})
+        self.capture("/api/auth/var.php", {"success": True, "name": "theme", "value": None, "exists": False})
+        self.assertIsNone(self.signed_in().get_variable("theme"))
+
+    def test_get_variables_and_delete_variable(self):
+        seen = self.capture("/api/auth/var.php", {"success": True, "vars": {"a": "1", "b": "two"}})
+        self.assertEqual(self.signed_in().get_variables(), {"a": "1", "b": "two"})
+        self.assertEqual(seen["body"], {"session_id": "s", "action": "list"})
+        self.capture("/api/auth/var.php", {"success": True, "vars": {}})
+        self.assertEqual(self.signed_in().get_variables(), {})
+        seen = self.capture("/api/auth/var.php", {"success": True, "name": "a", "deleted": True})
+        self.assertTrue(self.signed_in().delete_variable("a"))
+        self.assertEqual(seen["body"], {"session_id": "s", "action": "delete", "name": "a"})
+
+    def test_variable_refusal_raises_with_the_code(self):
+        from pwfauth import PwfRefusedError
+        self.capture("/api/auth/var.php", {"success": False, "error_code": "TOO_MANY_VARS", "message": "A customer can have at most 50 variables."})
+        with self.assertRaises(PwfRefusedError) as cm:
+            self.signed_in().set_variable("x", "y")
+        self.assertEqual(cm.exception.error_code, "TOO_MANY_VARS")
+        self.assertIn("50 variables", str(cm.exception))
+        with self.assertRaises(PwfError):
+            self.client().get_variable("x")      # not signed in
+        with self.assertRaises(ValueError):
+            self.signed_in().get_variable("")
+
 
 class TestNewCalls(Base):
     def capture_plain(self, path, reply=None):
@@ -363,7 +400,7 @@ class TestSessionDetails(Base):
             seen.update(ua=h.headers.get("User-Agent", "")), h._reply({"success": True})))
         self.client().get_app_info()
         self.assertEqual(seen["ua"], f"pwfauth-python/{__version__} (+https://pwfauth.com)")
-        self.assertEqual(__version__, "1.4.0")
+        self.assertEqual(__version__, "1.5.0")
 
     def test_options_are_validated(self):
         with self.assertRaises(PwfSecurityError):

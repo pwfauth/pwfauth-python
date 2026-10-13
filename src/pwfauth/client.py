@@ -25,13 +25,13 @@ from urllib.parse import urlparse
 
 from .envelope import CryptoEnvelope
 from .errors import (PwfCryptoError, PwfError, PwfErrorCodes, PwfHttpError,
-                     PwfSecurityError, ends_session)
+                     PwfRefusedError, PwfSecurityError, ends_session)
 from .hardware_id import get_hardware_id
 from .response import PwfResponse
 
 __all__ = ["PwfClient", "__version__"]
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 _DEFAULT_BASE_URL = "https://pwfauth.com"
 # 1.4.0: the same license server under a second name, used only when pwfauth.com gives no
@@ -382,6 +382,53 @@ class PwfClient:
     def get_slides(self) -> PwfResponse:
         """The application's active announcement slides."""
         return self.post_envelope("/api/app/slides.php", {"action": "get_slides"})
+
+    # ------------------------------------------------------------------ user variables
+
+    def get_variable(self, name: str) -> str | None:
+        """One user variable of the signed-in customer: a value your program (or you, in
+        the panel) stored on the server for this key or account. None when it was never
+        set. Raises :class:`PwfRefusedError` when the server refuses (``SESSION_EXPIRED``,
+        ``INVALID_NAME``). Docs: https://pwfauth.com/docs?p=variables"""
+        r = self._variable_call("get", name)
+        v = r.data.get("value")
+        return v if isinstance(v, str) else None
+
+    def set_variable(self, name: str, value: str) -> None:
+        """Store one user variable for the signed-in customer, making it or replacing its
+        value. It follows the customer to a new PC and is editable in the panel.
+
+        :param name: letters, digits, '_', '.' or '-', up to 64 characters.
+        :param value: text, up to 4 KB; keep structured data as JSON.
+        Raises :class:`PwfRefusedError` (``INVALID_NAME``, ``VALUE_TOO_LONG``,
+        ``TOO_MANY_VARS``, ``SESSION_EXPIRED``)."""
+        if not isinstance(value, str):
+            raise TypeError("value must be a string.")
+        self._variable_call("set", name, value)
+
+    def delete_variable(self, name: str) -> bool:
+        """Remove one user variable of the signed-in customer. True when there was one."""
+        return self._variable_call("delete", name).data.get("deleted") is True
+
+    def get_variables(self) -> dict[str, str]:
+        """Every user variable of the signed-in customer, name to value."""
+        v = self._variable_call("list").data.get("vars")
+        return {str(k): str(x) for k, x in v.items()} if isinstance(v, dict) else {}
+
+    def _variable_call(self, action: str, name: str | None = None, value: str | None = None) -> PwfResponse:
+        if not self._session_id:
+            raise PwfError("Not signed in — call login() or account_login() first.")
+        if name is not None and (not isinstance(name, str) or not name):
+            raise ValueError("A variable name is required.")
+        body: dict = {"session_id": self._session_id, "action": action}
+        if name is not None:
+            body["name"] = name
+        if value is not None:
+            body["value"] = value
+        r = self.post_envelope("/api/auth/var.php", body)
+        if not r.success:
+            raise PwfRefusedError(r)
+        return r
 
     def check_update(self, current_version: str, channel: str = "stable") -> PwfResponse:
         """Is there a newer build than ``current_version``? The reply carries

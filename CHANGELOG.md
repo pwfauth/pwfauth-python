@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0
+
+- **User variables.** Small values your program keeps on the PWF Auth server for the signed-in
+  customer (a key or an account), that follow them to a new PC and that you can see and edit in
+  the panel: `set_variable(name, value)`, `get_variable(name)` (None when never set),
+  `get_variables()` and `delete_variable(name)`. Docs: https://pwfauth.com/docs?p=variables
+- `PwfRefusedError`: what those typed calls raise when the server refuses (`error_code`,
+  the message, `response`). The calls that return a `PwfResponse` are unchanged.
+- Same signing key, same checks, same API: `pip install -U pwfauth`.
+
 ## 1.4.0
 
 - Some networks block the name `pwfauth.com` (Etisalat in the UAE answers "no such domain"),

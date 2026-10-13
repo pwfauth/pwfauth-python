@@ -1,12 +1,17 @@
 # pwfauth
 
-## Install 1.4.0
+## Install 1.5.0
+
+1.5.0 adds **user variables**: values your program keeps on the server for each customer
+(`set_variable`, `get_variable`, `get_variables`, `delete_variable`), editable in the panel.
+See [CHANGELOG.md](CHANGELOG.md).
+
 
 PWF Auth signs its replies with a new key. pwfauth 1.3.0 and newer pin it; **1.2.0 cannot talk to
 the current server**, so update:
 
 ```sh
-python -m pip install --upgrade pwfauth==1.4.0
+python -m pip install --upgrade pwfauth==1.5.0
 ```
 
 1.4.0 works on networks that block the name pwfauth.com (Etisalat in the UAE): when it gets
@@ -208,6 +213,7 @@ second seat against the licence's device limit.
 | `reset_hardware_id(key, reason)` | Move a license to this PC (self-service) |
 | `create_trial()` | Issue a free trial for this machine |
 | `get_app_info()` / `get_texts()` / `get_slides()` | Remote app content |
+| `set_variable(name, value)` / `get_variable(name)` / `get_variables()` / `delete_variable(name)` | Values kept on the server for this customer (raise `PwfRefusedError` when refused) |
 | `check_update(version, channel)` | OTA update check |
 | `track_social_click(link_id)` | Count a click on one of the app's social links |
 | `register_account()` / `register_account_with_key()` / `account_login()` | User accounts |

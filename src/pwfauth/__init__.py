@@ -29,7 +29,7 @@ machine counts as one device no matter which SDK an app uses.
 from .client import PwfClient
 from .envelope import CryptoEnvelope
 from .errors import (PwfCryptoError, PwfError, PwfErrorCodes, PwfHttpError,
-                     PwfSecurityError, ends_session)
+                     PwfRefusedError, PwfSecurityError, ends_session)
 from .hardware_id import get_hardware_id, reset_hardware_id_cache
 from .response import License, PwfResponse
 
@@ -44,6 +44,7 @@ __all__ = [
     "PwfHttpError",
     "PwfCryptoError",
     "PwfSecurityError",
+    "PwfRefusedError",
     "PwfErrorCodes",
     "ends_session",
     "get_hardware_id",

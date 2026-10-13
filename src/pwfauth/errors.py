@@ -30,6 +30,19 @@ class PwfHttpError(PwfError):
         self.snippet = snippet
 
 
+class PwfRefusedError(PwfError):
+    """The license server answered, and refused: raised by the typed calls that return a
+    value instead of a :class:`PwfResponse` (the user-variable calls). ``error_code`` is the
+    server's code (``SESSION_EXPIRED``, ``INVALID_NAME``, ``TOO_MANY_VARS`` ...), the message is
+    the server's sentence, and ``response`` is the whole reply.
+    """
+
+    def __init__(self, response) -> None:
+        super().__init__(response.message or response.error_code or "The license server refused the request.")
+        self.response = response
+        self.error_code = response.error_code or ""
+
+
 class PwfSecurityError(PwfError):
     """An encrypted endpoint answered with an UNENCRYPTED "success".
 
