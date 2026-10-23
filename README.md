@@ -1,10 +1,12 @@
+<p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ar.md">العربية</a></p>
+<p align="center">Video tutorials: <a href="https://www.youtube.com/@pwfauth">youtube.com/@pwfauth</a></p>
+
 # pwfauth
 
 ## Install 1.5.0
 
 1.5.0 adds **user variables**: values your program keeps on the server for each customer
-(`set_variable`, `get_variable`, `get_variables`, `delete_variable`), editable in the panel.
-See [CHANGELOG.md](CHANGELOG.md).
+(`set_variable`, `get_variable`, `get_variables`, `delete_variable`), editable in the panel. See [CHANGELOG.md](CHANGELOG.md)
 
 
 PWF Auth signs its replies with a new key. pwfauth 1.3.0 and newer pin it; **1.2.0 cannot talk to
@@ -16,8 +18,7 @@ python -m pip install --upgrade pwfauth==1.5.0
 
 1.4.0 works on networks that block the name pwfauth.com (Etisalat in the UAE): when it gets
 no reply at all, the same request goes to the same server as `https://pwfauth.net`. 1.3.1
-sends a request once more when the connection drops before any reply (Windows error 10054).
-See [CHANGELOG.md](CHANGELOG.md).
+sends a request once more when the connection drops before any reply (Windows error 10054). See [CHANGELOG.md](CHANGELOG.md)
 
 ## Server authentication update
 
@@ -26,17 +27,15 @@ RSA-SHA256 signature from the pinned PWFAuth public key. The private signing key
 stays on the server. Knowing the application secret is not enough to forge this
 signature. A fresh random nonce binds each response to its request, method, path,
 HTTP status and exact body bytes (PWF-REPLY-V1). Query strings are not part of the
-V1 signed path; production HTTPS protects them in transit.
+V1 signed path; production HTTPS protects them in transit
 
 The SDK accepts only `https://pwfauth.com`. Its default transport validates TLS
 certificates and refuses redirects. Missing/invalid signatures fail closed before
-JSON parsing or envelope decryption; unsigned proxy/CDN errors are security errors.
-There is no fallback to the old unsigned protocol. Update the server before clients.
-Applications must never unlock functionality after a security or transport error.
+JSON parsing or envelope decryption; unsigned proxy/CDN errors are security errors. There is no fallback to the old unsigned protocol. Update the server before clients. Applications must never unlock functionality after a security or transport error
 
 This addresses server emulation. It does not prevent an attacker who controls the
 client machine from modifying the application itself. Keep authoritative valuable
-operations on the server and keep real app secrets out of public repositories.
+operations on the server and keep real app secrets out of public repositories
 
 
 Official Python client for [PWF Auth](https://pwfauth.com). It covers:
@@ -45,9 +44,9 @@ Official Python client for [PWF Auth](https://pwfauth.com). It covers:
 - encrypted sessions with a server-driven kill switch;
 - self-service device moves;
 - accounts that run on license keys;
-- free trials, remote texts and slides, and OTA update checks.
+- free trials, remote texts and slides, and OTA update checks
 
-PWF Auth is **100% free**: every feature, unlimited, forever.
+PWF Auth is **100% free**: every feature, unlimited, forever
 
 ```bash
 pip install pwfauth
@@ -55,28 +54,28 @@ pip install pwfauth
 
 Python 3.9+. One dependency, `cryptography`, because Python has no AES in its
 standard library. HTTP uses `urllib` from the standard library rather than
-`requests`.
+`requests`
 
 ## What's new in 1.1.0
 
 - **The kill switch cannot be dodged.** Only an encrypted reply counts as the
-  server's answer.
+  server's answer
   - A plain refusal no longer keeps the session alive forever. The commonest is
-    the server rejecting a clock that was moved more than 5 minutes.
-  - Neither does a fake `{"success": true}`.
+    the server rejecting a clock that was moved more than 5 minutes
+  - Neither does a fake `{"success": true}`
   - Bans, pauses and expiry end the session with the server's own code
-    (`BANNED`, `PAUSED`, `EXPIRED`…) and message.
+    (`BANNED`, `PAUSED`, `EXPIRED`…) and message
 - **A wrong PC clock repairs itself.** When the server refuses the time, the client
   shifts by the server's clock and retries once. Opt out with
-  `auto_correct_clock=False`.
-- **Move a license to a new PC:** `reset_hardware_id(key, reason)`.
+  `auto_correct_clock=False`
+- **Move a license to a new PC:** `reset_hardware_id(key, reason)`
 - **Accounts that run on license keys:** `register_account_with_key()` and
-  `redeem_key()`.
+  `redeem_key()`
 - **Fixed:**
   - `check_update()`, `change_account_password()` and `track_social_click()` were
-    refused by the server in 1.0.x.
-  - The heartbeat now uses the server's interval.
-- See [CHANGELOG.md](CHANGELOG.md) for the details and the few behaviour changes.
+    refused by the server in 1.0.x
+  - The heartbeat now uses the server's interval
+- See [CHANGELOG.md](CHANGELOG.md) for the details and the few behaviour changes
 
 ## Quick start
 
@@ -107,7 +106,7 @@ client.start_heartbeat()   # keeps the session alive AND enforces the kill switc
 `start_heartbeat()` is what turns a one-time check into a live session. Revoke the key
 in your dashboard and `on_session_ended` fires on the user's machine within one
 heartbeat. It does not wait for the next launch. A console app or service can call
-`client.run_heartbeat()` instead, which blocks until the session ends.
+`client.run_heartbeat()` instead, which blocks until the session ends
 
 ### GUI apps
 
@@ -135,7 +134,7 @@ if login.error_code in (PwfErrorCodes.HWID_MISMATCH, PwfErrorCodes.DEVICE_LIMIT)
 
 The move unbinds the key from every machine and ends its sessions. In App Settings
 you decide whether customers may move keys themselves, and the cooldown between
-two moves (12 hours by default).
+two moves (12 hours by default)
 
 ## Accounts
 
@@ -149,9 +148,9 @@ client.change_account_password("bob", "S3cret!pass", "N3w!pass")
 
 - **Keys on accounts:** a key used for sign-up or redeemed onto an account is used
   up. It can no longer sign in on its own, and `login` with it answers
-  `KEY_REDEEMED`.
+  `KEY_REDEEMED`
 - **Password changes:** changing the password signs the account out on every
-  device.
+  device
 
 ## Reading the licence
 
@@ -165,7 +164,7 @@ else:
 
 `expires_at` is `None` for lifetime keys, because the server sends
 `expires_at: null`. Treating that as a date is the most common integration bug
-against this API, and the `is_lifetime` flag exists so you never have to.
+against this API, and the `is_lifetime` flag exists so you never have to
 
 ## Feature flags
 
@@ -174,7 +173,7 @@ if login.get_boolean("pro_export"):
     enable_export()
 ```
 
-Handles the `1` / `0` / `"true"` forms the dashboard can store.
+Handles the `1` / `0` / `"true"` forms the dashboard can store
 
 ## Checking a key without using a device seat
 
@@ -200,7 +199,7 @@ print(get_hardware_id())
 The ID is derived the same way as in the [.NET](https://www.nuget.org/packages/PWFAuth)
 and [Node](https://www.npmjs.com/package/pwfauth) clients. So **the same machine
 counts as one device under any SDK**, and switching languages does not use up a
-second seat against the licence's device limit.
+second seat against the licence's device limit
 
 ## Everything else
 
@@ -251,7 +250,7 @@ except PwfHttpError as e:
 `ends_session(code)` says whether a code means the licence is finished on this
 machine. It returns `False` for a code it does not recognise, on purpose. An unknown
 code is far more likely to be a new transient condition than a new way of being
-banned, and locking a paying user out on a guess is the worse failure.
+banned, and locking a paying user out on a guess is the worse failure
 
 ## Links
 
